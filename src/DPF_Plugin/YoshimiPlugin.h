@@ -42,6 +42,9 @@ class YoshimiPlugin : public Plugin {
 
     String defaultState;
 
+    // Let the UI side access DSP side (mainly for synth instance)
+    friend class YoshimiEditor;
+
 public:
     YoshimiPlugin();
     ~YoshimiPlugin();

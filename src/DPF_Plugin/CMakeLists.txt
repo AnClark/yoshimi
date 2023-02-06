@@ -18,11 +18,21 @@
 #   You should have received a copy of the GNU General Public License
 #   along with yoshimi.  If not, see <http://www.gnu.org/licenses/>.
 
+
+#
+# Base code stuff
+#
+
 file (GLOB yoshimi_dpf_plugin_files
         YoshimiPlugin.cpp
         YoshimiPlugin.h
         YoshimiMusicIO.cpp
         YoshimiMusicIO.h)
+file (GLOB yoshimi_dpf_ui_files
+        YoshimiEditor.cpp
+        YoshimiEditor.h
+        ../UI/MiscGui.cpp
+        ../UI/MiscGui.h)
 file (GLOB yoshimi_dsp_files
     ../DSP/AnalogFilter.cpp  ../DSP/Filter.cpp  ../DSP/FormantFilter.cpp
     ../DSP/SVFilter.cpp  ../DSP/Unison.cpp
@@ -52,8 +62,7 @@ file (GLOB yoshimi_interface_files
     ../Interface/Data2Text.cpp ../Interface/Data2text.h
     ../Interface/Text2Data.cpp ../Interface/Text2Data.h
     ../Interface/RingBuffer.h
-    ../Interface/MidiLearn.cpp ../Interface/MidiLearn.h
-    ../UI/MiscGui.cpp ../UI/MiscGui.h)
+    ../Interface/MidiLearn.cpp ../Interface/MidiLearn.h)
 file (GLOB yoshimi_params_files
     ../Params/ADnoteParameters.cpp  ../Params/EnvelopeParams.cpp
     ../Params/FilterParams.cpp  ../Params/LFOParams.cpp
@@ -73,10 +82,52 @@ file (GLOB yoshimi_synth_files
     ../Synth/WaveInterpolator.h ../Synth/XFadeManager.h ../Synth/BodyDisposal.h)
 file (GLOB yoshimi_musicio_files
     ../MusicIO/MusicIO.cpp ../MusicIO/MusicIO.h)
-file (GLOB yoshimi_manifest_ttl
-    manifest.ttl)
-file (GLOB yoshimi_plugin_ttl
-    yoshimi.ttl)
+
+
+#
+# FLTK stuff
+#
+set (FltkUI_names
+    "PresetsUI"  "EnvelopeUI"
+    "LFOUI"  "FilterUI"  "VirKeyboardUI"
+    "ConfigUI"  "SUBnoteUI"  "ResonanceUI"
+    "OscilGenUI"  "ADnoteUI"  "PADnoteUI"
+    "EffUI"  "BankUI"  "PartUI"
+    "MicrotonalUI"  "MasterUI" "MasterMiscUI"
+    "ParametersUI" "ConsoleUI" "VectorUI"
+    "MidiLearnUI"
+)
+
+# workaround fltk_wrap_ui breakage
+set (FltkUI_sources)
+set (FltkUI_headers)
+foreach(basename ${FltkUI_names})
+    set (fluidfile "${CMAKE_CURRENT_SOURCE_DIR}/../UI/${basename}.fl")
+    set (sourcefile "${basename}.cpp")
+    set (headerfile "${basename}.h")
+    add_custom_command(
+        OUTPUT ${sourcefile}
+        COMMAND ${FLTK_FLUID_EXECUTABLE} ARGS -c -o .cpp ${fluidfile}
+        DEPENDS ${fluidfile}
+    )
+    set (FltkUI_sources ${FltkUI_sources} "${sourcefile}")
+    set (FltkUI_headers ${FltkUI_headers} "${headerfile}")
+endforeach(basename ${FltkUI_names})
+
+set (FltkUI_sources
+    ${FltkUI_sources}
+    ../UI/DynamicTooltip.cpp
+    ../UI/WidgetPDial.cpp
+    ../UI/WidgetMWSlider.cpp
+    ../UI/WidgetCheckButton.cpp
+    ../UI/WidgetSpinner.cpp
+    ../UI/YoshiWin.cpp
+)
+
+
+#
+# Plugin build commands
+#
 
 set (DPF_PLUGIN_TYPES)
 if (VSTPlugin)
@@ -103,9 +154,13 @@ dpf_add_plugin (yoshimi_plugin
         ${yoshimi_interface_files}
         ${yoshimi_params_files}
         ${yoshimi_synth_files}
-        ${yoshimi_musicio_files})
+        ${yoshimi_musicio_files}
+    FILES_UI
+        ${yoshimi_dpf_ui_files}
+        ${FltkUI_sources}
+    MONOLITHIC)
 
-target_include_directories (yoshimi_plugin-dsp PRIVATE
+target_include_directories (yoshimi_plugin PUBLIC
     ${DPF_SOURCE_DIR}/distrho
     ${FLTK_INCLUDE_DIR}
     ${MXML_INCLUDE_DIRS}
@@ -125,3 +180,6 @@ target_link_libraries(yoshimi_plugin PRIVATE
     z
     ${LIBDL_LINUX_LIBS}
 )
+
+# Linker diagnostic options
+target_link_libraries(yoshimi_plugin PRIVATE -Wl,--no-undefined,--unresolved-symbols=report-all)
