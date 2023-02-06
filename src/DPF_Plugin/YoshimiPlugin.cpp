@@ -20,6 +20,7 @@
 */
 
 #include "YoshimiPlugin.h"
+#include "YoshimiMusicIO.h"
 
 YoshimiPlugin::YoshimiPlugin()
     : Plugin(0, 0, 1) // parameters, programs, states
@@ -149,6 +150,8 @@ void YoshimiPlugin::run(const float** inputs, float** outputs, uint32_t frames, 
     // otherwise plugin may crash.
     if (!fSynthInited || !fMusicIoInited)
         return;
+
+    fMusicIo->process(inputs, outputs, frames, midiEvents, midiEventCount);
 }
 
 void YoshimiPlugin::bufferSizeChanged(uint32_t newBufferSize)
@@ -184,3 +187,13 @@ Plugin* createPlugin()
 }
 
 END_NAMESPACE_DISTRHO
+
+int mainCreateNewInstance(unsigned int) //stub
+{
+    return 0;
+}
+
+
+void mainRegisterAudioPort(SynthEngine *, int ) //stub
+{
+}

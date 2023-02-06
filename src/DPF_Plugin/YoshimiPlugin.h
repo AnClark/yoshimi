@@ -26,10 +26,12 @@
 #include "Interface/InterChange.h"
 #include "Interface/Data2Text.h"
 #include "Interface/RingBuffer.h"
-#include "YoshimiMusicIO.h"
 
 #include "DistrhoPlugin.hpp"
 #include <memory>
+
+// Forward decls.
+class YoshimiMusicIO;
 
 START_NAMESPACE_DISTRHO
 
