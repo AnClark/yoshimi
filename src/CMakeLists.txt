@@ -104,6 +104,12 @@ option (BuildWithFLTK "Build with FLTK GUI" ON)
 #option to build lv2 plugin
 option (LV2Plugin "Build yoshimi lv2 plugin interface" ON)
 
+#option to build DPF-based plugins
+option (VSTPlugin "Build yoshimi vst 2.4 plugin interface" ON)
+option (VST3Plugin "Build yoshimi vst3 plugin interface" ON)
+option (CLAPPlugin "Build yoshimi clap plugin interface" ON)
+option (LV2Plugin_DPF "Build yoshimi lv2 plugin interface (DPF edition)" ON)
+
 # developer info
 option (ShowNoteOnTimes "Report Note-On Times" OFF)
 option (ReportNotes "Report Notes On/Off" OFF)
@@ -572,4 +578,36 @@ if (LV2Plugin)
 
     pkg_check_modules(LV2 REQUIRED lv2>=1.0.0)
     add_subdirectory(LV2_Plugin)
+endif ()
+
+if (VSTPlugin OR VST3Plugin OR CLAPPlugin OR LV2Plugin_DPF)
+    set (DPFPlugin ON)
+endif ()
+
+if (DPFPlugin)
+    set (DPF_SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rdparty/DPF)
+
+    #Include DPF
+    if (NOT EXISTS "${DPF_SOURCE_DIR}/CMakeLists.txt")
+        message (STATUS "DPF NOT FOUND")
+        message (STATUS "Attempting to checkout submodule")
+        find_package (Git REQUIRED)
+        execute_process (COMMAND git submodule update --init --recursive)
+        if (NOT EXISTS "${DPF_SOURCE_DIR}/CMakeLists.txt")
+            message (WARNING "FAILED TO CHECKOUT DPF\n"
+            "Plugins will NOT build.\n"
+            "Please check file permissions and your network")
+            set (VSTPlugin OFF)
+            set (VST3Plugin OFF)
+            set (CLAPPlugin OFF)
+            set (LV2Plugin_DPF OFF)
+            set (DPFPlugin OFF)
+        endif ()
+    else ()
+        message (STATUS "Found DPF Submodule...")
+        add_subdirectory (${DPF_SOURCE_DIR})
+    endif()
+
+    #Include DPF plugin source
+    add_subdirectory (DPF_Plugin)
 endif ()
