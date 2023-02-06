@@ -47,13 +47,6 @@ _synth(synth), _sampleRate(initSampleRate), _bufferSize(initBufferSize)
 	    return;
     }
 
-    // I use unique pointer for synthesizer. So firstSynth seems to be unneeded
-    //if (_synth->getUniqueId() == 0)
-    //{
-    //    firstSynth = _synth;
-    //    //firstSynth->getRuntime().Log("Started first");
-    //}
-
     _synth->getRuntime().showGui = false;
     _synth->getRuntime().runSynth = true;
 
@@ -98,93 +91,46 @@ void YoshimiMusicIO::process(const float** inputs, float** outputs, uint32_t sam
 
     for (uint32_t i = 0; i < midi_event_count; i++)
     {
-        DISTRHO::MidiEvent event = midi_events[i];
+        DISTRHO::MidiEvent event = midi_events[i];  // NOTICE: DPF's MidiEvent is never null
 
-        // NOTICE: DPF's MidiEvent is never null
+        if (event.size <= 0)
+            continue;
 
-        if (event.size) // This "event" means DPF MIDI event
-        //if (event->body.type == _midi_event_id)   // This "event" means LV2 event
+        if (event.size > sizeof(event.kDataSize))
+            continue;
+
+        next_frame = event.frame;
+        if (next_frame >= sample_count)
+            continue;
+
+        uint32_t to_process = next_frame - offs;
+
+        if ((to_process > 0)
+            && (processed < sample_count)
+            && (to_process <= (sample_count - processed)))
         {
-            if (event.size > sizeof(event.kDataSize))
-                continue;
-
-            next_frame = event.frame;
-            if (next_frame >= sample_count)
-                continue;
-
-            uint32_t to_process = next_frame - offs;
-
-            if ((to_process > 0)
-               && (processed < sample_count)
-               && (to_process <= (sample_count - processed)))
+            int mastered = 0;
+            offs = next_frame;
+            while (to_process - mastered > 0)
             {
-                int mastered = 0;
-                offs = next_frame;
-                while (to_process - mastered > 0)
+                float bpmInc = (float)(processed + mastered - beatsAt) * beats.bpm / (synth->samplerate_f * 60.f);
+                synth->setBeatValues(beats.songBeat + bpmInc, beats.monotonicBeat + bpmInc, beats.bpm);
+                int mastered_chunk = _synth->MasterAudio(tmpLeft, tmpRight, to_process - mastered);
+                for (uint32_t i = 0; i < NUM_MIDI_PARTS + 1; ++i)
                 {
-                    float bpmInc = (float)(processed + mastered - beatsAt) * beats.bpm / (synth->samplerate_f * 60.f);
-                    synth->setBeatValues(beats.songBeat + bpmInc, beats.monotonicBeat + bpmInc, beats.bpm);
-                    int mastered_chunk = _synth->MasterAudio(tmpLeft, tmpRight, to_process - mastered);
-                    for (uint32_t i = 0; i < NUM_MIDI_PARTS + 1; ++i)
-                    {
-                        tmpLeft [i] += mastered_chunk;
-                        tmpRight [i] += mastered_chunk;
-                    }
-
-                    mastered += mastered_chunk;
+                    tmpLeft [i] += mastered_chunk;
+                    tmpRight [i] += mastered_chunk;
                 }
-                processed += to_process;
+
+                mastered += mastered_chunk;
             }
-            //process this midi event
-            // TODO: Is it right?
-            const uint8_t *msg = (const uint8_t*)event.data;
-            if (_bFreeWheel != NULL)
-                processMidiMessage(msg);
+            processed += to_process;
         }
-#if 0   // Below is LV2 event of non-MIDI situations
-        else if (event->body.type == _atom_blank || event->body.type == _atom_object)
-        {
-            LV2_Atom_Object *obj = (LV2_Atom_Object *)&event->body;
-            if (obj->body.otype != _atom_position)
-                continue;
 
-            LV2_Atom *bpb = NULL;
-            LV2_Atom *bar = NULL;
-            LV2_Atom *barBeat = NULL;
-            LV2_Atom *bpm = NULL;
-            lv2_atom_object_get(obj,
-                                _atom_bpb, &bpb,
-                                _atom_bar, &bar,
-                                _atom_bar_beat, &barBeat,
-                                _atom_bpm, &bpm,
-                                NULL);
-
-            if (bpm && bpm->type == _atom_float) {
-                beats.bpm = ((LV2_Atom_Float *)bpm)->body;
-                bpmProvided = true;
-            }
-
-            uint32_t frame = event->time.frames;
-            float bpmInc = (float)(frame - processed) * beats.bpm / (synth->samplerate_f * 60.f);
-
-            if (bpb && bpb->type == _atom_float
-                && bar && bar->type == _atom_long
-                && barBeat && barBeat->type == _atom_float)
-            {
-                // There is a global beat number in the LV2 time spec, called
-                // "beat", but Carla doesn't seem to deliver this correctly, so
-                // piece it together from bar and barBeat instead.
-                float lv2Bpb = ((LV2_Atom_Float *)bpb)->body;
-                float lv2Bar = ((LV2_Atom_Long *)bar)->body;
-                float lv2BarBeat = ((LV2_Atom_Float *)barBeat)->body;
-                beats.songBeat = lv2Bar * lv2Bpb + lv2BarBeat;
-            }
-            else
-                beats.songBeat += bpmInc;
-            beats.monotonicBeat += bpmInc;
-            beatsAt = frame;
-        }
-#endif
+        // Process this midi event
+        const uint8_t *msg = (const uint8_t*)event.data;
+        //if (_bFreeWheel != NULL)  // I don't know how to implement freewheel. It's always empty.
+        processMidiMessage(msg);
     }
 
     if (processed < sample_count)
@@ -245,12 +191,8 @@ void YoshimiMusicIO::process(const float** inputs, float** outputs, uint32_t sam
     /*
     * Currently only 2-channel edition is supported.
     */
-    for (uint32_t i = 0; i < sample_count; i++) {
-        outputs[0][i] = zynLeft[NUM_MIDI_PARTS][i];
-        outputs[1][i] = zynLeft[NUM_MIDI_PARTS][i];
-    }
-	//memcpy(outputs[0],  zynLeft[NUM_MIDI_PARTS],  128 * sizeof(float));
-	//memcpy(outputs[1], zynRight[NUM_MIDI_PARTS], 128 * sizeof(float));
+	memcpy(outputs[0],  zynLeft[NUM_MIDI_PARTS],  sample_count * sizeof(float));
+	memcpy(outputs[1], zynRight[NUM_MIDI_PARTS], sample_count * sizeof(float));
 }
 
 void YoshimiMusicIO::processMidiMessage(const uint8_t * msg)
