@@ -22,6 +22,8 @@
 #include "YoshimiMusicIO.h"
 #include "DistrhoPlugin.hpp"
 
+extern SynthEngine *firstSynth;
+
 YoshimiMusicIO::YoshimiMusicIO(SynthEngine *synth, uint32_t initSampleRate, uint32_t initBufferSize) 
 :MusicIO(synth, new SinglethreadedBeatTracker),
 _synth(synth), _sampleRate(initSampleRate), _bufferSize(initBufferSize)
@@ -46,6 +48,9 @@ _synth(synth), _sampleRate(initSampleRate), _bufferSize(initBufferSize)
         _inited = false;
 	    return;
     }
+
+    if (_synth->getUniqueId() == 0)
+        firstSynth = _synth;
 
     _synth->getRuntime().showGui = false;
     _synth->getRuntime().runSynth = true;
@@ -197,6 +202,7 @@ void YoshimiMusicIO::process(const float** inputs, float** outputs, uint32_t sam
 
 void YoshimiMusicIO::processMidiMessage(const uint8_t * msg)
 {
-    bool in_place = _bFreeWheel ? ((*_bFreeWheel == 0) ? false : true) : false;
+    // NOTICE: _bFreeWheel will be zero in LV2. Simply bypass it as I don't know how to implement this.
+    bool in_place = false; //_bFreeWheel ? ((*_bFreeWheel == 0) ? false : true) : false;
     setMidi(msg[0], msg[1], msg[2], in_place);
 }
