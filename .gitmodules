@@ -1,0 +1,6 @@
+[submodule "dpf"]
+	path = dpf
+	url = https://github.com/DISTRHO/DPF.git
+[submodule "yoshimi"]
+	path = yoshimi
+	url = https://github.com/Yoshimi/yoshimi.git
