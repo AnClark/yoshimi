@@ -44,8 +44,8 @@ public:
 
     //access from plugin interface
     bool hasInited() { return _inited; }
-    void setSamplerate(uint32_t newSampleRate) { _sampleRate = newSampleRate; _synth->samplerate = _sampleRate; }
-    void setBufferSize(uint32_t newBufferSize) { _bufferSize = newBufferSize; _synth->buffersize = _bufferSize; }
+    void setSamplerate(uint32_t newSampleRate);
+    void setBufferSize(uint32_t newBufferSize);
     
    //virtual methods from MusicIO
    unsigned int getSamplerate(void) {return _sampleRate; }
