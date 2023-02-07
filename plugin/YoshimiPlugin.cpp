@@ -156,11 +156,19 @@ void YoshimiPlugin::run(const float** inputs, float** outputs, uint32_t frames, 
 
 void YoshimiPlugin::bufferSizeChanged(uint32_t newBufferSize)
 {
+    /*
+    * Buffer size changes MUST be handled properly!
+    * See: YoshimiMusicIO::setBufferSize().
+    */
     fMusicIo->setBufferSize(newBufferSize);
 }
 
 void YoshimiPlugin::sampleRateChanged(double newSampleRate)
 {
+    /*
+    * Sample rate changes MUST be handled properly!
+    * See: YoshimiMusicIO::setSampleRate().
+    */
     fMusicIo->setSamplerate(newSampleRate);
 }
 

@@ -201,3 +201,42 @@ void YoshimiMusicIO::processMidiMessage(const uint8_t * msg)
     bool in_place = false; // _bFreeWheel ? ((*_bFreeWheel == 0) ? false : true) : false;
     setMidi(msg[0], msg[1], msg[2], in_place);
 }
+
+void YoshimiMusicIO::setSamplerate(uint32_t newSampleRate)
+{
+    /*
+    * Must reinit synthesizer on every buffer size changes.
+    * Otherwise you will hear terrible drills when loading CLAP plugin!
+    */
+
+    _sampleRate = newSampleRate;
+
+    if (!_synth->Init(_sampleRate, _bufferSize))
+    {
+        _synth->getRuntime().LogError("Cannot reinit synth engine on sample rate change");
+    } else {
+        d_stderr("Sample rate changed to %d", _sampleRate);
+    }
+}
+
+void YoshimiMusicIO::setBufferSize(uint32_t newBufferSize)
+{
+    /*
+    * Must reinit synthesizer on every buffer size changes.
+    * Otherwise Yoshimi will behave unexpectedly on VST3 and CLAP:
+    *   - Crash when destroying Parts (during destructor of SynthEngine)!
+    *   - Generate wrong samples (REAPER will automute the track)!
+    *
+    * It was hard to find out why that crash happens, until it occured to me that buffer size
+    * was not handled properly in my plugin.
+    */
+
+    _bufferSize = newBufferSize;
+
+    if (!_synth->Init(_sampleRate, _bufferSize))
+    {
+        _synth->getRuntime().LogError("Cannot reinit synth engine on buffer size change");
+    } else {
+        d_stderr("Buffer size changed to %d", _bufferSize);
+    }
+}
