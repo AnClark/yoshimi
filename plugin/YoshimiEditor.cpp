@@ -25,25 +25,27 @@
 #include "MasterUI.h"
 
 YoshimiEditor::YoshimiEditor()
-    : UI(600, 300), fSynthesizer(nullptr), fMasterUI(nullptr), fUiInited(false)
+    : UI(600, 300)
+    , fSynthesizer(nullptr)
+    , fMasterUI(nullptr)
+    , fUiInited(false)
 {
     // Get synth engine instance
-    YoshimiPlugin *fDspInstance = (YoshimiPlugin*) UI::getPluginInstancePointer();
-    fSynthesizer = &(*fDspInstance->fSynthesizer);
+    YoshimiPlugin* fDspInstance = (YoshimiPlugin*)UI::getPluginInstancePointer();
+    fSynthesizer                = &(*fDspInstance->fSynthesizer);
 
     // Set GUI close callback
     // TODO: May not needed on DPF?
-    //fSynthesizer->setGuiClosedCallback(YoshimiLV2PluginUI::static_guiClosed, this);
+    // fSynthesizer->setGuiClosedCallback(YoshimiLV2PluginUI::static_guiClosed, this);
 
     /*
-    * Adapted from YoshimiLV2PluginUI::show().
-    */
+     * Adapted from YoshimiLV2PluginUI::show().
+     */
     fSynthesizer->getRuntime().showGui = true;
     if (fMasterUI == NULL)
         fUiInited = true;
     fMasterUI = fSynthesizer->getGuiMaster();
-    if (fMasterUI == NULL)
-    {
+    if (fMasterUI == NULL) {
         fSynthesizer->getRuntime().LogError("Failed to instantiate gui");
         return;
     }
@@ -56,14 +58,15 @@ YoshimiEditor::YoshimiEditor()
 YoshimiEditor::~YoshimiEditor()
 {
     /*
-    * Adapted from YoshimiLV2PluginUI::static_guiClosed().
-    */
+     * Adapted from YoshimiLV2PluginUI::static_guiClosed().
+     */
     fMasterUI = NULL;
     fSynthesizer->closeGui();
 }
 
 void YoshimiEditor::parameterChanged(uint32_t index, float value)
-{}
+{
+}
 
 void YoshimiEditor::stateChanged(const char* key, const char* value)
 {
@@ -89,10 +92,9 @@ void YoshimiEditor::uiIdle()
         return;
 
     /*
-    * Adapted from YoshimiLV2PluginUI::run().
-    */
-    if (fMasterUI != NULL)
-    {
+     * Adapted from YoshimiLV2PluginUI::run().
+     */
+    if (fMasterUI != NULL) {
         fMasterUI->checkBuffer();
         Fl::check();
     }
@@ -102,7 +104,7 @@ START_NAMESPACE_DISTRHO
 
 UI* createUI()
 {
-	return new YoshimiEditor();
+    return new YoshimiEditor();
 }
 
 END_NAMESPACE_DISTRHO

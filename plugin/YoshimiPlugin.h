@@ -23,9 +23,6 @@
 #define YOSHIMI_PLUGIN_H
 
 #include "Misc/SynthEngine.h"
-#include "Interface/InterChange.h"
-#include "Interface/Data2Text.h"
-#include "Interface/RingBuffer.h"
 
 #include "DistrhoPlugin.hpp"
 #include <memory>
@@ -36,9 +33,9 @@ class YoshimiMusicIO;
 START_NAMESPACE_DISTRHO
 
 class YoshimiPlugin : public Plugin {
-    std::unique_ptr<SynthEngine> fSynthesizer;
+    std::unique_ptr<SynthEngine>    fSynthesizer;
     std::unique_ptr<YoshimiMusicIO> fMusicIo;
-    bool fSynthInited, fMusicIoInited;
+    bool                            fSynthInited, fMusicIoInited;
 
     String defaultState;
 
@@ -80,9 +77,9 @@ protected:
     }
 
     /**
-           Get the plugin license (a single line of text or a URL).@n
-           For commercial plugins this should return some short copyright information.
-         */
+        Get the plugin license (a single line of text or a URL).@n
+        For commercial plugins this should return some short copyright information.
+    */
     const char* getLicense() const noexcept override
     {
         return "GPLv2";
@@ -91,17 +88,17 @@ protected:
     /**
         Get the plugin version, in hexadecimal.
         @see d_version()
-        */
+    */
     uint32_t getVersion() const noexcept override
     {
         return d_version(2, 2, 2);
     }
 
     /**
-           Get the plugin unique Id.@n
-           This value is used by LADSPA, DSSI and VST plugin formats.
-           @see d_cconst()
-         */
+        Get the plugin unique Id.@n
+        This value is used by LADSPA, DSSI and VST plugin formats.
+        @see d_cconst()
+    */
     int64_t getUniqueId() const noexcept override
     {
         return d_cconst('y', 'o', 's', 'm');
@@ -116,10 +113,10 @@ protected:
     // ----------------------------------------------------------------------------------------------------------------
     // Internal data
 
-    float getParameterValue(uint32_t index) const override;
-    void setParameterValue(uint32_t index, float value) override;
+    float  getParameterValue(uint32_t index) const override;
+    void   setParameterValue(uint32_t index, float value) override;
     String getState(const char* key) const;
-    void setState(const char* key, const char* value) override;
+    void   setState(const char* key, const char* value) override;
 
     // ----------------------------------------------------------------------------------------------------------------
     // Audio/MIDI Processing
@@ -129,7 +126,7 @@ protected:
     void run(const float** inputs, float** outputs, uint32_t frames, const MidiEvent* midiEvents, uint32_t midiEventCount) override;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // Callbacks (optional)
+    // Callbacks
 
     void sampleRateChanged(double newSampleRate) override;
     void bufferSizeChanged(uint32_t newBufferSize) override;
@@ -137,7 +134,12 @@ protected:
     // ----------------------------------------------------------------------------------------------------------------
 
 private:
+    // ----------------------------------------------------------------------------------------------------------------
+    // Internal helpers
+
     char* _getState() const;
+
+    // ----------------------------------------------------------------------------------------------------------------
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(YoshimiPlugin)
 };

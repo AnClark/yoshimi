@@ -24,17 +24,19 @@
 #include "Effects/EffectMgr.h"
 #include "Params/Controller.h"
 
-YoshimiMusicIO::YoshimiMusicIO(SynthEngine *synth, uint32_t initSampleRate, uint32_t initBufferSize) 
-:MusicIO(synth, new SinglethreadedBeatTracker),
-_synth(synth), _sampleRate(initSampleRate), _bufferSize(initBufferSize)
+YoshimiMusicIO::YoshimiMusicIO(SynthEngine* synth, uint32_t initSampleRate, uint32_t initBufferSize)
+    : MusicIO(synth, new SinglethreadedBeatTracker)
+    , _synth(synth)
+    , _sampleRate(initSampleRate)
+    , _bufferSize(initBufferSize)
 {
     /*
-    * Adapted YoshimiLV2Plugin::init() (member function).
-    * It actually initialises MusicIO part.
-    *
-    * Notice: In YoshimiLV2Plugin, _bufferSize is assinged in constructor rather than init().
-    *         Here we assign it via YoshimiMusicIO's constructor.
-    */
+     * Adapted YoshimiLV2Plugin::init() (member function).
+     * It actually initialises MusicIO part.
+     *
+     * Notice: In YoshimiLV2Plugin, _bufferSize is assinged in constructor rather than init().
+     *         Here we assign it via YoshimiMusicIO's constructor.
+     */
 
     if (!prepBuffers()) {
         _synth->getRuntime().LogError("Cannot prepare buffers");
@@ -42,14 +44,13 @@ _synth(synth), _sampleRate(initSampleRate), _bufferSize(initBufferSize)
         return;
     }
 
-    if (!_synth->Init(_sampleRate, _bufferSize))
-    {
+    if (!_synth->Init(_sampleRate, _bufferSize)) {
         _synth->getRuntime().LogError("Cannot init synth engine");
         _inited = false;
-	    return;
+        return;
     }
 
-    _synth->getRuntime().showGui = false;
+    _synth->getRuntime().showGui  = false;
     _synth->getRuntime().runSynth = true;
 
     synth->getRuntime().Log("Starting in DPF plugin mode");
@@ -61,10 +62,12 @@ YoshimiMusicIO::~YoshimiMusicIO()
     delete beatTracker;
 }
 
-void YoshimiMusicIO::process(const float** inputs, float** outputs, uint32_t sample_count, const DISTRHO::MidiEvent *midi_events, uint32_t midi_event_count)
+// ----------------------------------------------------------------------------------------------------------------
+// Process audio / MIDI
+
+void YoshimiMusicIO::process(const float** inputs, float** outputs, uint32_t sample_count, const DISTRHO::MidiEvent* midi_events, uint32_t midi_event_count)
 {
-    if (sample_count == 0)
-    {
+    if (sample_count == 0) {
         return;
     }
 
@@ -76,24 +79,22 @@ void YoshimiMusicIO::process(const float** inputs, float** outputs, uint32_t sam
      * However, Yoshimi is always correct when working standalone.
      */
 
-    int offs = 0;
-    uint32_t next_frame = 0;
-    uint32_t processed = 0;
+    int                     offs       = 0;
+    uint32_t                next_frame = 0;
+    uint32_t                processed  = 0;
     BeatTracker::BeatValues beats(beatTracker->getRawBeatValues());
-    uint32_t beatsAt = 0;
-    bool bpmProvided = false;
-    float *tmpLeft [NUM_MIDI_PARTS + 1];
-    float *tmpRight [NUM_MIDI_PARTS + 1];
+    uint32_t                beatsAt     = 0;
+    bool                    bpmProvided = false;
+    float*                  tmpLeft[NUM_MIDI_PARTS + 1];
+    float*                  tmpRight[NUM_MIDI_PARTS + 1];
 
-    for (uint32_t i = 0; i < NUM_MIDI_PARTS + 1; ++i)
-    {
-        tmpLeft [i] = zynLeft [i];
-        tmpRight [i] = zynRight [i];
+    for (uint32_t i = 0; i < NUM_MIDI_PARTS + 1; ++i) {
+        tmpLeft[i]  = zynLeft[i];
+        tmpRight[i] = zynRight[i];
     }
 
-    for (uint32_t i = 0; i < midi_event_count; i++)
-    {
-        DISTRHO::MidiEvent event = midi_events[i];  // NOTICE: DPF's MidiEvent is never null
+    for (uint32_t i = 0; i < midi_event_count; i++) {
+        DISTRHO::MidiEvent event = midi_events[i]; // NOTICE: DPF's MidiEvent is never null
 
         if (event.size <= 0)
             continue;
@@ -109,19 +110,16 @@ void YoshimiMusicIO::process(const float** inputs, float** outputs, uint32_t sam
 
         if ((to_process > 0)
             && (processed < sample_count)
-            && (to_process <= (sample_count - processed)))
-        {
+            && (to_process <= (sample_count - processed))) {
             int mastered = 0;
-            offs = next_frame;
-            while (to_process - mastered > 0)
-            {
+            offs         = next_frame;
+            while (to_process - mastered > 0) {
                 float bpmInc = (float)(processed + mastered - beatsAt) * beats.bpm / (synth->samplerate_f * 60.f);
                 synth->setBeatValues(beats.songBeat + bpmInc, beats.monotonicBeat + bpmInc, beats.bpm);
                 int mastered_chunk = _synth->MasterAudio(tmpLeft, tmpRight, to_process - mastered);
-                for (uint32_t i = 0; i < NUM_MIDI_PARTS + 1; ++i)
-                {
-                    tmpLeft [i] += mastered_chunk;
-                    tmpRight [i] += mastered_chunk;
+                for (uint32_t i = 0; i < NUM_MIDI_PARTS + 1; ++i) {
+                    tmpLeft[i] += mastered_chunk;
+                    tmpRight[i] += mastered_chunk;
                 }
 
                 mastered += mastered_chunk;
@@ -130,30 +128,26 @@ void YoshimiMusicIO::process(const float** inputs, float** outputs, uint32_t sam
         }
 
         // Process this midi event
-        const uint8_t *msg = (const uint8_t*)event.data;
-        //if (_bFreeWheel != NULL)  // I don't know how to implement freewheel. It's always empty.
+        const uint8_t* msg = (const uint8_t*)event.data;
+        // if (_bFreeWheel != NULL)  // I don't know how to implement freewheel. It's always empty.
         processMidiMessage(msg);
     }
 
-    if (processed < sample_count)
-    {
+    if (processed < sample_count) {
         uint32_t to_process = sample_count - processed;
-        int mastered = 0;
-        offs = next_frame;
-        while (to_process - mastered > 0)
-        {
+        int      mastered   = 0;
+        offs                = next_frame;
+        while (to_process - mastered > 0) {
             float bpmInc = (float)(processed + mastered - beatsAt) * beats.bpm / (synth->samplerate_f * 60.f);
             synth->setBeatValues(beats.songBeat + bpmInc, beats.monotonicBeat + bpmInc, beats.bpm);
             int mastered_chunk = _synth->MasterAudio(tmpLeft, tmpRight, to_process - mastered);
-            for (uint32_t i = 0; i < NUM_MIDI_PARTS + 1; ++i)
-            {
-                tmpLeft [i] += mastered_chunk;
-                tmpRight [i] += mastered_chunk;
+            for (uint32_t i = 0; i < NUM_MIDI_PARTS + 1; ++i) {
+                tmpLeft[i] += mastered_chunk;
+                tmpRight[i] += mastered_chunk;
             }
             mastered += mastered_chunk;
         }
         processed += to_process;
-
     }
 
     float bpmInc = (float)(sample_count - beatsAt) * beats.bpm / (synth->samplerate_f * 60.f);
@@ -163,7 +157,7 @@ void YoshimiMusicIO::process(const float** inputs, float** outputs, uint32_t sam
         beats.bpm = synth->PbpmFallback;
     beatTracker->setBeatValues(beats);
 
-#if 0  // notify host about plugin's changes (May not exactly required by DPF!)
+#if 0 // notify host about plugin's changes (May not exactly required by DPF!)
     LV2_Atom_Sequence *aSeq = static_cast<LV2_Atom_Sequence *>(_notifyDataPortOut);
     size_t neededAtomSize = sizeof(LV2_Atom_Event) + sizeof(LV2_Atom_Object_Body);
     size_t paddedSize = (neededAtomSize + 7U) & (~7U);
@@ -191,33 +185,35 @@ void YoshimiMusicIO::process(const float** inputs, float** outputs, uint32_t sam
 #endif
 
     /*
-    * Currently only 2-channel edition is supported.
-    */
-	memcpy(outputs[0],  zynLeft[NUM_MIDI_PARTS],  sample_count * sizeof(float));
-	memcpy(outputs[1], zynRight[NUM_MIDI_PARTS], sample_count * sizeof(float));
+     * Currently only 2-channel edition is supported.
+     */
+    memcpy(outputs[0], zynLeft[NUM_MIDI_PARTS], sample_count * sizeof(float));
+    memcpy(outputs[1], zynRight[NUM_MIDI_PARTS], sample_count * sizeof(float));
 }
 
-void YoshimiMusicIO::processMidiMessage(const uint8_t * msg)
+void YoshimiMusicIO::processMidiMessage(const uint8_t* msg)
 {
     // NOTICE: _bFreeWheel will be zero in LV2. Simply bypass it as I don't know how to implement this.
     bool in_place = false; // _bFreeWheel ? ((*_bFreeWheel == 0) ? false : true) : false;
     setMidi(msg[0], msg[1], msg[2], in_place);
 }
 
+// ----------------------------------------------------------------------------------------------------------------
+// Access from plugin interface
+
 void YoshimiMusicIO::setSamplerate(uint32_t newSampleRate)
 {
     /*
-    * Must reinit synthesizer on every buffer size changes.
-    * Otherwise you will hear terrible drills when loading CLAP plugin!
-    */
+     * Must reinit synthesizer on every buffer size changes.
+     * Otherwise you will hear terrible drills when loading CLAP plugin!
+     */
 
     _sampleRate = newSampleRate;
 
     // Deinit synth parts first. This prevents unexpected memory consumptions
     _deinitSynthParts();
 
-    if (!_synth->Init(_sampleRate, _bufferSize))
-    {
+    if (!_synth->Init(_sampleRate, _bufferSize)) {
         _synth->getRuntime().LogError("Cannot reinit synth engine on sample rate change");
     } else {
         d_stderr("Sample rate changed to %d", _sampleRate);
@@ -227,41 +223,43 @@ void YoshimiMusicIO::setSamplerate(uint32_t newSampleRate)
 void YoshimiMusicIO::setBufferSize(uint32_t newBufferSize)
 {
     /*
-    * Must reinit synthesizer on every buffer size changes.
-    * Otherwise Yoshimi will behave unexpectedly on VST3 and CLAP:
-    *   - Crash when destroying Parts (during destructor of SynthEngine)!
-    *   - Generate wrong samples (REAPER will automute the track)!
-    *
-    * It was hard to find out why that crash happens, until it occured to me that buffer size
-    * was not handled properly in my plugin.
-    */
+     * Must reinit synthesizer on every buffer size changes.
+     * Otherwise Yoshimi will behave unexpectedly on VST3 and CLAP:
+     *   - Crash when destroying Parts (during destructor of SynthEngine)!
+     *   - Generate wrong samples (REAPER will automute the track)!
+     *
+     * It was hard to find out why that crash happens, until it occured to me that buffer size
+     * was not handled properly in my plugin.
+     */
 
     _bufferSize = newBufferSize;
 
     // Deinit synth parts first. This prevents unexpected memory consumptions
     _deinitSynthParts();
 
-    if (!_synth->Init(_sampleRate, _bufferSize))
-    {
+    if (!_synth->Init(_sampleRate, _bufferSize)) {
         _synth->getRuntime().LogError("Cannot reinit synth engine on buffer size change");
     } else {
         d_stderr("Buffer size changed to %d", _bufferSize);
     }
 }
 
+// ----------------------------------------------------------------------------------------------------------------
+// Workarounds
+
 void YoshimiMusicIO::_deinitSynthParts()
 {
     /*
-    * Remember to clean up synth parts before re-initialisation of synth engine.
-    *
-    * _synth->Init() is only designed for initialisation at the first time,
-    * so it does not cleaning up parts at first.
-    *
-    * If we don't clean up manually, _synth->Init() will simply reallocate parts,
-    * consuming more memory, and leaving the already-allocated parts out of control.
-    *
-    * I don't want to modify the Yoshimi source tree, so I've done this workaround.
-    */
+     * Remember to clean up synth parts before re-initialisation of synth engine.
+     *
+     * _synth->Init() is only designed for initialisation at the first time,
+     * so it does not cleaning up parts at first.
+     *
+     * If we don't clean up manually, _synth->Init() will simply reallocate parts,
+     * consuming more memory, and leaving the already-allocated parts out of control.
+     *
+     * I don't want to modify the Yoshimi source tree, so I've done this workaround.
+     */
 
     for (int npart = 0; npart < NUM_MIDI_PARTS; ++npart)
         if (_synth->part[npart]) {
@@ -278,7 +276,7 @@ void YoshimiMusicIO::_deinitSynthParts()
     for (int nefx = 0; nefx < NUM_SYS_EFX; ++nefx)
         if (_synth->sysefx[nefx]) {
             delete _synth->sysefx[nefx];
-            _synth->sysefx[nefx] = NULL; 
+            _synth->sysefx[nefx] = NULL;
         }
 
     sem_destroy(&_synth->partlock);

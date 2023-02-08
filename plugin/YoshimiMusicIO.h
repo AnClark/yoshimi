@@ -31,42 +31,48 @@ namespace DISTRHO {
 
 class YoshimiMusicIO : public MusicIO {
 private:
-    SynthEngine *_synth;
-   uint32_t _sampleRate;
-   uint32_t _bufferSize;
-   bool _inited;
+    SynthEngine* _synth;
+    uint32_t     _sampleRate;
+    uint32_t     _bufferSize;
+    bool         _inited;
 
-    float *_bFreeWheel; // TODO: How to implement this?
+    float* _bFreeWheel; // TODO: How to implement this?
 
 public:
-    YoshimiMusicIO(SynthEngine *synth, uint32_t initSampleRate, uint32_t initBufferSize);
+    YoshimiMusicIO(SynthEngine* synth, uint32_t initSampleRate, uint32_t initBufferSize);
     ~YoshimiMusicIO();
 
-    //access from plugin interface
+    // ----------------------------------------------------------------------------------------------------------------
+    // Access from plugin interface
     bool hasInited() { return _inited; }
     void setSamplerate(uint32_t newSampleRate);
     void setBufferSize(uint32_t newBufferSize);
-    
-   //virtual methods from MusicIO
-   unsigned int getSamplerate(void) {return _sampleRate; }
-   int getBuffersize(void) {return _bufferSize; }
-   bool Start(void) { return true; }
-   void Close(void){;}
 
-   bool openAudio() { return true; }
-   bool openMidi() { return true; }
+    // ----------------------------------------------------------------------------------------------------------------
+    // Virtual methods from MusicIO
+    unsigned int getSamplerate(void) { return _sampleRate; }
+    int          getBuffersize(void) { return _bufferSize; }
+    bool         Start(void) { return true; }
+    void         Close(void) { ; }
 
-   virtual std::string audioClientName(void) { return "DPF plugin"; }
-   virtual int audioClientId(void) { return 0; }
-   virtual std::string midiClientName(void) { return "DPF plugin"; }
-   virtual int midiClientId(void) { return 0; }
+    bool openAudio() { return true; }
+    bool openMidi() { return true; }
 
-   virtual void registerAudioPort(int) {}
+    virtual std::string audioClientName(void) { return "DPF plugin"; }
+    virtual int         audioClientId(void) { return 0; }
+    virtual std::string midiClientName(void) { return "DPF plugin"; }
+    virtual int         midiClientId(void) { return 0; }
 
-    void process(const float** inputs, float** outputs, uint32_t sample_count, const DISTRHO::MidiEvent *midi_events, uint32_t midi_event_count);
-    void processMidiMessage(const uint8_t * msg);
+    virtual void registerAudioPort(int) { }
+
+    // ----------------------------------------------------------------------------------------------------------------
+    // Process audio / MIDI
+    void process(const float** inputs, float** outputs, uint32_t sample_count, const DISTRHO::MidiEvent* midi_events, uint32_t midi_event_count);
+    void processMidiMessage(const uint8_t* msg);
 
 private:
+    // ----------------------------------------------------------------------------------------------------------------
+    // Workarounds
     void _deinitSynthParts();
 };
 

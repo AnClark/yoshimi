@@ -26,13 +26,13 @@ YoshimiPlugin::YoshimiPlugin()
     : Plugin(0, 0, 1) // parameters, programs, states
 {
     /*
-    * Initialize synthesizer and MusicIO.
-    */
+     * Initialize synthesizer and MusicIO.
+     */
     std::list<string> dummy;
-    fSynthesizer = std::make_unique<SynthEngine>(dummy, LV2PluginTypeSingle);   // Set as single-output plugin
+    fSynthesizer = std::make_unique<SynthEngine>(dummy, LV2PluginTypeSingle); // Set as single-output plugin
     fSynthInited = true;
 
-    fMusicIo = std::make_unique<YoshimiMusicIO>(&(*fSynthesizer), (uint32_t)getSampleRate(), (uint32_t)getBufferSize());    
+    fMusicIo       = std::make_unique<YoshimiMusicIO>(&(*fSynthesizer), (uint32_t)getSampleRate(), (uint32_t)getBufferSize());
     fMusicIoInited = true;
 
     // Adaptered from YoshimiLV2Plugin constructor.
@@ -40,45 +40,41 @@ YoshimiPlugin::YoshimiPlugin()
     fSynthesizer->setBPMAccurate(true);
 
     /*
-    * Setup runtime.
-    *
-    * Adapted from YoshimiLV2Plugin::instantiate() (static method).
-    * That function is the entrance of LV2 plugin instance.
-    */
-    if (!fSynthesizer->getRuntime().isRuntimeSetupCompleted())
-    {
+     * Setup runtime.
+     *
+     * Adapted from YoshimiLV2Plugin::instantiate() (static method).
+     * That function is the entrance of LV2 plugin instance.
+     */
+    if (!fSynthesizer->getRuntime().isRuntimeSetupCompleted()) {
         // TODO: How to stop processing if error occurs?
         fSynthesizer->getRuntime().LogError("Synthesizer runtime setup failed");
-        fSynthesizer.reset();  // delete synth instance
+        fSynthesizer.reset(); // delete synth instance
 
         fSynthInited = false;
         return;
     }
 
-    if (fMusicIo->hasInited())
-    {
+    if (fMusicIo->hasInited()) {
         /*
-        * Perform further global initialisation.
-        * For stand-alone the equivalent init happens in main(),
-        * after mainCreateNewInstance() returned successfully.
-        */
+         * Perform further global initialisation.
+         * For stand-alone the equivalent init happens in main(),
+         * after mainCreateNewInstance() returned successfully.
+         */
         fSynthesizer->installBanks();
         fSynthesizer->loadHistory();
-    }
-    else
-    {
+    } else {
         fSynthesizer->getRuntime().LogError("Failed to create Yoshimi DPF plugin");
-        fSynthesizer.reset();   // delete synth instance
+        fSynthesizer.reset(); // delete synth instance
         fMusicIo.reset();
 
-        fSynthInited = false;
+        fSynthInited   = false;
         fMusicIoInited = false;
         return;
     }
 
     /*
-    * Initialize default state value.
-    */
+     * Initialize default state value.
+     */
     defaultState = _getState();
 
     fSynthesizer->getRuntime().Log("Now Yoshimi is ready!");
@@ -87,61 +83,84 @@ YoshimiPlugin::YoshimiPlugin()
 YoshimiPlugin::~YoshimiPlugin()
 {
     /*
-    * Since synthesizer instance is managed by unique_ptr, we can assume it exists.
-    * No need to check if it is empty or not (fSynthesizer != NULL is always satisfied).
-    */
-    //if (!flatbankprgs.empty())
+     * Since synthesizer instance is managed by unique_ptr, we can assume it exists.
+     * No need to check if it is empty or not (fSynthesizer != NULL is always satisfied).
+     */
+    // if (!flatbankprgs.empty())
     //{
-    //    fMusicIO->getProgram(flatbankprgs.size() + 1);
-    //}
+    //     fMusicIO->getProgram(flatbankprgs.size() + 1);
+    // }
     fSynthesizer->getRuntime().runSynth = false;
     fSynthesizer->getRuntime().Log("EXIT plugin");
     fSynthesizer->getRuntime().Log("Goodbye - Play again soon?");
 
     /*
-    * fSynthesizer and fMusicIo will be automatically cleaned up by unique_ptr.
-    */
+     * fSynthesizer and fMusicIo will be automatically cleaned up by unique_ptr.
+     */
 }
 
-void YoshimiPlugin::initState(uint32_t index, State& state) {
+// ----------------------------------------------------------------------------------------------------------------
+// Init
+
+void YoshimiPlugin::initState(uint32_t index, State& state)
+{
     /*
-    * Yoshimi use 1 state to store configurations.
-    */
-    state.key = "state";
+     * Yoshimi use 1 state to store configurations.
+     */
+    state.key          = "state";
     state.defaultValue = defaultState;
 }
 
-String YoshimiPlugin::getState(const char* key) const {
-    if (strcmp(key, "state") == 0)
-    {
+void YoshimiPlugin::initParameter(uint32_t index, Parameter& parameter)
+{
+    // Yoshimi does not use parameters
+    (void)index;
+    (void)parameter;
+}
+
+// ----------------------------------------------------------------------------------------------------------------
+// Internal data
+
+String YoshimiPlugin::getState(const char* key) const
+{
+    if (strcmp(key, "state") == 0) {
         return String(_getState(), false);
     }
 
     return String();
 }
 
-void YoshimiPlugin::setState(const char* key, const char* value) {
-    if (strcmp(key, "state") == 0)
-    {
+void YoshimiPlugin::setState(const char* key, const char* value)
+{
+    if (strcmp(key, "state") == 0) {
         fSynthesizer->putalldata(value, sizeof(value));
     }
 }
 
-void YoshimiPlugin::initParameter(uint32_t index, Parameter& parameter) {
-    // Yoshimi does not use parameters
-    (void)index;
-    (void)parameter;
-}
-
-float YoshimiPlugin::getParameterValue(uint32_t index) const {
+float YoshimiPlugin::getParameterValue(uint32_t index) const
+{
     // Yoshimi does not use parameters
     return index;
 }
 
-void YoshimiPlugin::setParameterValue(uint32_t index, float value) {
+void YoshimiPlugin::setParameterValue(uint32_t index, float value)
+{
     // Yoshimi does not use parameters
     (void)index;
     (void)value;
+}
+
+// ----------------------------------------------------------------------------------------------------------------
+// Audio/MIDI Processing
+
+void YoshimiPlugin::activate()
+{
+    fMusicIo->Start();
+}
+
+void YoshimiPlugin::deactivate()
+{
+    fMusicIo->Close();
 }
 
 void YoshimiPlugin::run(const float** inputs, float** outputs, uint32_t frames, const MidiEvent* midiEvents, uint32_t midiEventCount)
@@ -154,12 +173,15 @@ void YoshimiPlugin::run(const float** inputs, float** outputs, uint32_t frames, 
     fMusicIo->process(inputs, outputs, frames, midiEvents, midiEventCount);
 }
 
+// ----------------------------------------------------------------------------------------------------------------
+// Callbacks
+
 void YoshimiPlugin::bufferSizeChanged(uint32_t newBufferSize)
 {
     /*
-    * Buffer size changes MUST be handled properly!
-    * See: YoshimiMusicIO::setBufferSize().
-    */
+     * Buffer size changes MUST be handled properly!
+     * See: YoshimiMusicIO::setBufferSize().
+     */
 
     // Back up all states
     const char* state_backup(_getState());
@@ -174,9 +196,9 @@ void YoshimiPlugin::bufferSizeChanged(uint32_t newBufferSize)
 void YoshimiPlugin::sampleRateChanged(double newSampleRate)
 {
     /*
-    * Sample rate changes MUST be handled properly!
-    * See: YoshimiMusicIO::setSampleRate().
-    */
+     * Sample rate changes MUST be handled properly!
+     * See: YoshimiMusicIO::setSampleRate().
+     */
 
     // Back up all states
     const char* state_backup(_getState());
@@ -188,20 +210,19 @@ void YoshimiPlugin::sampleRateChanged(double newSampleRate)
     setState("state", state_backup);
 }
 
-void YoshimiPlugin::activate() {
-    fMusicIo->Start();
-}
+// ----------------------------------------------------------------------------------------------------------------
+// Internal helpers
 
-void YoshimiPlugin::deactivate() {
-    fMusicIo->Close();
-}
-
-char* YoshimiPlugin::_getState() const {
-    char *data = nullptr;
+char* YoshimiPlugin::_getState() const
+{
+    char* data = nullptr;
     fSynthesizer->getalldata(&data);
 
     return data;
 }
+
+// ----------------------------------------------------------------------------------------------------------------
+// Plugin entry point
 
 START_NAMESPACE_DISTRHO
 
@@ -212,12 +233,14 @@ Plugin* createPlugin()
 
 END_NAMESPACE_DISTRHO
 
-int mainCreateNewInstance(unsigned int) //stub
+// ----------------------------------------------------------------------------------------------------------------
+// Yoshimi entry points (stub, needed when linking)
+
+int mainCreateNewInstance(unsigned int) // stub
 {
     return 0;
 }
 
-
-void mainRegisterAudioPort(SynthEngine *, int ) //stub
+void mainRegisterAudioPort(SynthEngine*, int) // stub
 {
 }

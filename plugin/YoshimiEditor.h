@@ -30,14 +30,14 @@ START_NAMESPACE_DISTRHO
 
 class YoshimiEditor : public UI {
     /*
-    * Yoshimi's FLTK UI is managed by synth engine... This is not a good idea.
-    * But in the current period, I don't want to touch other parts.
-    * So, access to DSP side is required.
-    */
-    SynthEngine *fSynthesizer;
+     * Yoshimi's FLTK UI is managed by synth engine... This is not a good idea.
+     * But in the current period, I don't want to touch other parts.
+     * So, access to DSP side is required.
+     */
+    SynthEngine* fSynthesizer;
 
-    MasterUI *fMasterUI;
-    bool fUiInited;
+    MasterUI* fMasterUI;
+    bool      fUiInited;
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -50,14 +50,14 @@ protected:
     // DSP/Plugin Callbacks
 
     void parameterChanged(uint32_t index, float value) override;
-    //void programLoaded(uint32_t index) override;
+    // void programLoaded(uint32_t index) override;
     void stateChanged(const char* key, const char* value) override;
 
     // ----------------------------------------------------------------------------------------------------------------
     // External window overrides
 
-    //uintptr_t getNativeWindowHandle() const noexcept override;
-    //void sizeChanged(uint width, uint height) override;
+    // uintptr_t getNativeWindowHandle() const noexcept override;
+    // void sizeChanged(uint width, uint height) override;
     void visibilityChanged(const bool visible) override;
     void uiIdle() override;
 
