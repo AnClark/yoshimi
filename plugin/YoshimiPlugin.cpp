@@ -107,6 +107,9 @@ void YoshimiPlugin::initState(uint32_t index, State& state)
     /*
      * Yoshimi use 1 state to store configurations.
      */
+
+    YOSHIMI_INIT_SAFE_CHECK()
+
     state.key          = "state";
     state.defaultValue = defaultState;
 }
@@ -123,6 +126,8 @@ void YoshimiPlugin::initParameter(uint32_t index, Parameter& parameter)
 
 String YoshimiPlugin::getState(const char* key) const
 {
+    YOSHIMI_INIT_SAFE_CHECK(String())
+
     if (strcmp(key, "state") == 0) {
         return String(_getState(), false);
     }
@@ -132,6 +137,8 @@ String YoshimiPlugin::getState(const char* key) const
 
 void YoshimiPlugin::setState(const char* key, const char* value)
 {
+    YOSHIMI_INIT_SAFE_CHECK()
+
     if (strcmp(key, "state") == 0) {
         fSynthesizer->putalldata(value, sizeof(value));
     }
@@ -155,20 +162,21 @@ void YoshimiPlugin::setParameterValue(uint32_t index, float value)
 
 void YoshimiPlugin::activate()
 {
+    YOSHIMI_INIT_SAFE_CHECK()
+
     fMusicIo->Start();
 }
 
 void YoshimiPlugin::deactivate()
 {
+    YOSHIMI_INIT_SAFE_CHECK()
+
     fMusicIo->Close();
 }
 
 void YoshimiPlugin::run(const float** inputs, float** outputs, uint32_t frames, const MidiEvent* midiEvents, uint32_t midiEventCount)
 {
-    // Do not process if synth or MusicIO is not initialised.
-    // otherwise plugin may crash.
-    if (!fSynthInited || !fMusicIoInited)
-        return;
+    YOSHIMI_INIT_SAFE_CHECK()
 
     fMusicIo->process(inputs, outputs, frames, midiEvents, midiEventCount);
 }
@@ -182,6 +190,8 @@ void YoshimiPlugin::bufferSizeChanged(uint32_t newBufferSize)
      * Buffer size changes MUST be handled properly!
      * See: YoshimiMusicIO::setBufferSize().
      */
+
+    YOSHIMI_INIT_SAFE_CHECK()
 
     // Back up all states
     const char* state_backup(_getState());
@@ -199,6 +209,8 @@ void YoshimiPlugin::sampleRateChanged(double newSampleRate)
      * Sample rate changes MUST be handled properly!
      * See: YoshimiMusicIO::setSampleRate().
      */
+
+    YOSHIMI_INIT_SAFE_CHECK()
 
     // Back up all states
     const char* state_backup(_getState());

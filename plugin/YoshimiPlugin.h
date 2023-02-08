@@ -146,4 +146,13 @@ private:
 
 END_NAMESPACE_DISTRHO
 
+// ----------------------------------------------------------------------------------------------------------------
+// Utility macros
+
+// Do not process if synth or MusicIO is not initialised.
+// otherwise plugin may crash.
+#define YOSHIMI_INIT_SAFE_CHECK(ret_val)              \
+    if (!fSynthInited || !fMusicIoInited) \
+        return ret_val;
+
 #endif
