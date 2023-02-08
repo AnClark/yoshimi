@@ -21,6 +21,8 @@
 
 #include "YoshimiMusicIO.h"
 #include "DistrhoPlugin.hpp"
+#include "Effects/EffectMgr.h"
+#include "Params/Controller.h"
 
 YoshimiMusicIO::YoshimiMusicIO(SynthEngine *synth, uint32_t initSampleRate, uint32_t initBufferSize) 
 :MusicIO(synth, new SinglethreadedBeatTracker),
@@ -211,6 +213,9 @@ void YoshimiMusicIO::setSamplerate(uint32_t newSampleRate)
 
     _sampleRate = newSampleRate;
 
+    // Deinit synth parts first. This prevents unexpected memory consumptions
+    _deinitSynthParts();
+
     if (!_synth->Init(_sampleRate, _bufferSize))
     {
         _synth->getRuntime().LogError("Cannot reinit synth engine on sample rate change");
@@ -233,10 +238,52 @@ void YoshimiMusicIO::setBufferSize(uint32_t newBufferSize)
 
     _bufferSize = newBufferSize;
 
+    // Deinit synth parts first. This prevents unexpected memory consumptions
+    _deinitSynthParts();
+
     if (!_synth->Init(_sampleRate, _bufferSize))
     {
         _synth->getRuntime().LogError("Cannot reinit synth engine on buffer size change");
     } else {
         d_stderr("Buffer size changed to %d", _bufferSize);
+    }
+}
+
+void YoshimiMusicIO::_deinitSynthParts()
+{
+    /*
+    * Remember to clean up synth parts before re-initialisation of synth engine.
+    *
+    * _synth->Init() is only designed for initialisation at the first time,
+    * so it does not cleaning up parts at first.
+    *
+    * If we don't clean up manually, _synth->Init() will simply reallocate parts,
+    * consuming more memory, and leaving the already-allocated parts out of control.
+    *
+    * I don't want to modify the Yoshimi source tree, so I've done this workaround.
+    */
+
+    for (int npart = 0; npart < NUM_MIDI_PARTS; ++npart)
+        if (_synth->part[npart]) {
+            delete _synth->part[npart];
+            _synth->part[npart] = NULL;
+        }
+
+    for (int nefx = 0; nefx < NUM_INS_EFX; ++nefx)
+        if (_synth->insefx[nefx]) {
+            delete _synth->insefx[nefx];
+            _synth->insefx[nefx] = NULL;
+        }
+
+    for (int nefx = 0; nefx < NUM_SYS_EFX; ++nefx)
+        if (_synth->sysefx[nefx]) {
+            delete _synth->sysefx[nefx];
+            _synth->sysefx[nefx] = NULL; 
+        }
+
+    sem_destroy(&_synth->partlock);
+    if (_synth->ctl) {
+        delete _synth->ctl;
+        _synth->ctl = NULL;
     }
 }

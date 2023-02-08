@@ -165,7 +165,6 @@ void YoshimiPlugin::bufferSizeChanged(uint32_t newBufferSize)
     const char* state_backup(_getState());
 
     // Reinit synth engine with new buffer size
-    // TODO: Should I delete current synth instance first?
     fMusicIo->setBufferSize(newBufferSize);
 
     // Restore states
@@ -183,7 +182,6 @@ void YoshimiPlugin::sampleRateChanged(double newSampleRate)
     const char* state_backup(_getState());
 
     // Reinit synth engine with new sample rate
-    // TODO: Should I delete current synth instance first?
     fMusicIo->setSamplerate(newSampleRate);
 
     // Restore states

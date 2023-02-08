@@ -65,6 +65,9 @@ public:
 
     void process(const float** inputs, float** outputs, uint32_t sample_count, const DISTRHO::MidiEvent *midi_events, uint32_t midi_event_count);
     void processMidiMessage(const uint8_t * msg);
+
+private:
+    void _deinitSynthParts();
 };
 
 #endif
