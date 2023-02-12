@@ -4,3 +4,6 @@
 [submodule "yoshimi"]
 	path = yoshimi
 	url = https://github.com/Yoshimi/yoshimi.git
+[submodule "vendor/dpf-widgets"]
+	path = vendor/dpf-widgets
+	url = https://github.com/DISTRHO/DPF-Widgets.git
