@@ -97,6 +97,7 @@ endif()
 
 if(DPFPlugin)
   set(DPF_SOURCE_DIR ${PROJECT_SOURCE_DIR}/dpf)
+  set(DPF_WIDGETS_SOURCE_DIR ${PROJECT_SOURCE_DIR}/vendor/dpf-widgets)
 
   # Include DPF
   if(NOT EXISTS "${DPF_SOURCE_DIR}/CMakeLists.txt")
@@ -119,6 +120,8 @@ if(DPFPlugin)
     message(STATUS "Found DPF Submodule...")
     add_subdirectory(${DPF_SOURCE_DIR})
   endif()
+
+  # TODO: Add detection for DPF-Widgets
 endif()
 
 #
@@ -286,13 +289,30 @@ dpf_add_plugin(
   ${DPF_PLUGIN_TYPES}
   FILES_DSP
   plugin/YoshimiPlugin.cpp
-  plugin/YoshimiMusicIO.cpp)
+  plugin/YoshimiMusicIO.cpp
+  FILES_UI
+  plugin/YoshimiEditor.cpp
+  ${DPF_WIDGETS_SOURCE_DIR}/opengl/DearImGui.cpp
+  MONOLITHIC    # Prevent linker error on LV2
+  )
+
+# Include DPF Dear ImGui directory
+target_include_directories(yoshimi_plugin PUBLIC
+  ${DPF_WIDGETS_SOURCE_DIR}/generic/
+  ${DPF_WIDGETS_SOURCE_DIR}/opengl/
+  ${DPF_WIDGETS_SOURCE_DIR}/opengl/DearImGui/
+)
+
+# Include UI component
+add_subdirectory(ui)
+
+target_include_directories(yoshimi_plugin PUBLIC ui/)
 
 # Link against Yoshimi modules
 # NOTICE: You MUST Mind the library order here! The former one depends on the latters.
 target_link_libraries(
-  yoshimi_plugin-dsp
-  PRIVATE yoshimi_core)
+  yoshimi_plugin
+  PRIVATE yoshimi_exchange yoshimi_core)
 
 # Link against 3rdparty deps
 target_link_libraries(

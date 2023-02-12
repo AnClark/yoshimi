@@ -22,9 +22,11 @@
 #ifndef YOSHIMI_EDITOR_H
 #define YOSHIMI_EDITOR_H
 
+#include "Exchange/ParamStorage.h"
 #include "Misc/SynthEngine.h"
 
 #include "DistrhoUI.hpp"
+#include "ResizeHandle.hpp"
 
 START_NAMESPACE_DISTRHO
 
@@ -36,8 +38,9 @@ class YoshimiEditor : public UI {
      */
     SynthEngine* fSynthesizer;
 
-    MasterUI* fMasterUI;
-    bool      fUiInited;
+    ResizeHandle fResizeHandle;
+
+    YoshimiParamStorage fParams;
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -54,12 +57,16 @@ protected:
     void stateChanged(const char* key, const char* value) override;
 
     // ----------------------------------------------------------------------------------------------------------------
-    // External window overrides
+    // Widget Callbacks
 
-    // uintptr_t getNativeWindowHandle() const noexcept override;
-    // void sizeChanged(uint width, uint height) override;
-    void visibilityChanged(const bool visible) override;
-    void uiIdle() override;
+    void onImGuiDisplay() override;
+
+private:
+    // ----------------------------------------------------------------------------------------------------------------
+    // Internal helpers
+
+    void _fetchParams();
+    void _syncStateToHost();
 
     DISTRHO_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(YoshimiEditor)
 };

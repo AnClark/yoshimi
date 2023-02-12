@@ -22,46 +22,30 @@
 #include "YoshimiEditor.h"
 #include "YoshimiPlugin.h"
 
-#include "MasterUI.h"
+#include "Exchange/Exchange.hpp"
+
+// these two are both zero and repesented by an enum entry
+constexpr unsigned char TYPE_READ = TOPLEVEL::type::Adjust;
 
 YoshimiEditor::YoshimiEditor()
-    : UI(600, 300)
+    : UI(600, 400)
     , fSynthesizer(nullptr)
-    , fMasterUI(nullptr)
-    , fUiInited(false)
+    , fResizeHandle(this)
 {
     // Get synth engine instance
     YoshimiPlugin* fDspInstance = (YoshimiPlugin*)UI::getPluginInstancePointer();
     fSynthesizer                = &(*fDspInstance->fSynthesizer);
 
-    // Set GUI close callback
-    // TODO: May not needed on DPF?
-    // fSynthesizer->setGuiClosedCallback(YoshimiLV2PluginUI::static_guiClosed, this);
+    // hide handle if UI is resizable
+    if (isResizable())
+        fResizeHandle.hide();
 
-    /*
-     * Adapted from YoshimiLV2PluginUI::show().
-     */
-    fSynthesizer->getRuntime().showGui = true;
-    if (fMasterUI == NULL)
-        fUiInited = true;
-    fMasterUI = fSynthesizer->getGuiMaster();
-    if (fMasterUI == NULL) {
-        fSynthesizer->getRuntime().LogError("Failed to instantiate gui");
-        return;
-    }
-    if (fUiInited)
-        fMasterUI->Init("YoshimiEditor");
-
-    // TODO: Use OS API to reparent FLTK window
+    // Fetch initial params from synth side
+    _fetchParams();
 }
 
 YoshimiEditor::~YoshimiEditor()
 {
-    /*
-     * Adapted from YoshimiLV2PluginUI::static_guiClosed().
-     */
-    fMasterUI = NULL;
-    fSynthesizer->closeGui();
 }
 
 void YoshimiEditor::parameterChanged(uint32_t index, float value)
@@ -71,33 +55,81 @@ void YoshimiEditor::parameterChanged(uint32_t index, float value)
 void YoshimiEditor::stateChanged(const char* key, const char* value)
 {
     // TODO: Refresh UI when loading a new state
-    d_stderr("TODO: Stated changed. Should refresh UI!");
+    d_stderr(">>> Stated changed. Should refresh UI!");
+
+    // Refresh parameters
+    _fetchParams();
 }
 
-void YoshimiEditor::visibilityChanged(const bool visible)
+void YoshimiEditor::onImGuiDisplay()
 {
-    if (!fUiInited)
-        return;
+    const float width  = getWidth();
+    const float height = getHeight();
+    const float margin = 20.0f * getScaleFactor();
 
-    if (visible) {
-        fMasterUI->masterwindow->show();
-    } else {
-        fMasterUI->masterwindow->hide();
+    ImGui::SetNextWindowPos(ImVec2(margin, margin));
+    ImGui::SetNextWindowSize(ImVec2(width - 2 * margin, height - 2 * margin));
+
+    if (ImGui::Begin("Yoshimi Demo", nullptr, ImGuiWindowFlags_NoResize)) {
+        static char aboutText[256] = "This is a demo UI for Yoshimi, based on Dear ImGui.\n";
+        ImGui::InputTextMultiline("About", aboutText, sizeof(aboutText));
+
+        if (ImGui::SliderFloat("Master Volume", &fParams.pVolume, 0.0f, 127.0f)) {
+            // NOTICE: Methods from FLTK UI does not take effects. Use CLI-provided one instead.
+            // YoshimiExchange::MasterUI::send_data(fSynthesizer, 0, MAIN::control::volume, fParams.pVolume, 0, TOPLEVEL::section::main);
+
+            // Interpreted from CLI/CmdInterpreter.cpp:6103
+            YoshimiExchange::sendNormal(fSynthesizer, 0, fParams.pVolume, TOPLEVEL::type::Write, MAIN::control::volume, TOPLEVEL::section::main);
+        }
+
+        if (ImGui::SliderFloat("Global Detune", &fParams.pGlobalDetune, 0.0f, 127.0f)) {
+            YoshimiExchange::sendNormal(fSynthesizer, TOPLEVEL::action::lowPrio, fParams.pGlobalDetune, TOPLEVEL::type::Write, MAIN::control::detune, TOPLEVEL::section::main);
+        }
+
+        if (ImGui::SliderInt("Key Shift", &fParams.pKeyShift, -36, 36)) {
+            YoshimiExchange::sendNormal(fSynthesizer, TOPLEVEL::action::lowPrio, fParams.pKeyShift, TOPLEVEL::type::Write, MAIN::control::keyShift, TOPLEVEL::section::main);
+        }
+
+        if (ImGui::IsItemDeactivated()) {
+            _syncStateToHost();
+        }
+#if 0
+        if (ImGui::SliderFloat("Gain (dB)", &fGain, -90.0f, 30.0f)) {
+            if (ImGui::IsItemActivated())
+                editParameter(0, true);
+
+            setParameterValue(0, fGain);
+        }
+
+        if (ImGui::IsItemDeactivated()) {
+            editParameter(0, false);
+        }
+#endif
     }
+
+    ImGui::End();
 }
 
-void YoshimiEditor::uiIdle()
+// TODO:
+// - Consider moving this to separate file
+// - Implement returns_update() instead of simply fetching values (in case of outdated data)
+//   * Reference: MasterUI::returns_update() (view its call hierachy)
+void YoshimiEditor::_fetchParams()
 {
-    if (!fUiInited)
-        return;
+    // Some default values can be directly accessed from synth instance
+    fParams.pVolume       = fSynthesizer->Pvolume;
+    fParams.pGlobalDetune = fSynthesizer->microtonal.Pglobalfinedetune;
+    fParams.pKeyShift     = fSynthesizer->Pkeyshift - 64;
+}
 
-    /*
-     * Adapted from YoshimiLV2PluginUI::run().
-     */
-    if (fMasterUI != NULL) {
-        fMasterUI->checkBuffer();
-        Fl::check();
-    }
+void YoshimiEditor::_syncStateToHost()
+{
+    char* data = nullptr;
+    fSynthesizer->getalldata(&data);
+
+    setState("state", data);
+
+    delete data;
 }
 
 START_NAMESPACE_DISTRHO
