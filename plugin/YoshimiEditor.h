@@ -42,6 +42,9 @@ class YoshimiEditor : public UI {
 
     YoshimiParamStorage fParams;
 
+    BankEntryMap fBankEntries;
+    long         fBankCurrent;
+
     // ----------------------------------------------------------------------------------------------------------------
 
 public:

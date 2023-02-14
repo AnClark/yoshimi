@@ -41,4 +41,25 @@ namespace YoshimiExchange {
         float fetchData(SynthEngine* synth, float value, int control, int part, int kititem = UNUSED, int engine = UNUSED, int insert = UNUSED, int parameter = UNUSED, int offset = UNUSED, int miscmsg = UNUSED, int request = UNUSED);
     }
 
+    namespace Bank {
+        // ----------------------------
+        // Base API
+
+        void  send_data(SynthEngine* synth, int action, int control, float value, int type, int part = UNUSED, int kititem = UNUSED, int engine = UNUSED, int insert = UNUSED, int parameter = UNUSED, int miscmsg = UNUSED);
+        float fetchData(SynthEngine* synth, float value, int control, int part, int kititem = UNUSED, int engine = UNUSED, int insert = UNUSED, int parameter = UNUSED, int offset = UNUSED, int miscmsg = UNUSED, int request = UNUSED);
+
+        // ----------------------------
+        // Fetch bank information
+
+        void getBankEntries(SynthEngine* synth, BankEntryMap& entryMap);
+        void getBankNames(SynthEngine* synth, std::vector<std::string>& bankList);
+        void getBankIndexes(SynthEngine* synth, std::vector<long>& indexList);
+        int  getCurrentBank(SynthEngine* synth);
+
+        // ----------------------------
+        // Set bank state
+
+        void switchBank(SynthEngine* synth, long newBankId);
+    }
+
 }

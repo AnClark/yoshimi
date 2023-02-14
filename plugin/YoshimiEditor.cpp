@@ -42,6 +42,10 @@ YoshimiEditor::YoshimiEditor()
 
     // Fetch initial params from synth side
     _fetchParams();
+
+    // Read bank list
+    YoshimiExchange::Bank::getBankEntries(fSynthesizer, fBankEntries);
+    fBankCurrent = YoshimiExchange::Bank::getCurrentBank(fSynthesizer);
 }
 
 YoshimiEditor::~YoshimiEditor()
@@ -88,6 +92,24 @@ void YoshimiEditor::onImGuiDisplay()
 
         if (ImGui::SliderInt("Key Shift", &fParams.pKeyShift, -36, 36)) {
             YoshimiExchange::sendNormal(fSynthesizer, TOPLEVEL::action::lowPrio, fParams.pKeyShift, TOPLEVEL::type::Write, MAIN::control::keyShift, TOPLEVEL::section::main);
+        }
+
+        if (ImGui::BeginCombo("Banks", fBankEntries.at(fBankCurrent).dirname.c_str())) {
+            for (auto it = fBankEntries.begin(); it != fBankEntries.end(); it++) {
+                if (!it->second.dirname.empty()) {
+                    const bool is_selected = fBankCurrent == it->first;
+
+                    if (ImGui::Selectable(it->second.dirname.c_str(), is_selected)) {
+                        fBankCurrent = it->first;
+                        YoshimiExchange::Bank::switchBank(fSynthesizer, fBankCurrent);
+                    }
+
+                    // Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+                    if (is_selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+            }
+            ImGui::EndCombo();
         }
 
         if (ImGui::IsItemDeactivated()) {
