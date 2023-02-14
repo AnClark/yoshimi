@@ -53,6 +53,7 @@ option(VSTPlugin "Build yoshimi vst 2.4 plugin interface" ON)
 option(VST3Plugin "Build yoshimi vst3 plugin interface" ON)
 option(CLAPPlugin "Build yoshimi clap plugin interface" ON)
 option(LV2Plugin_DPF "Build yoshimi lv2 plugin interface (DPF edition)" ON)
+option(JackStandalone "Build yoshimi JACK standalone application" OFF)
 
 #
 # Dependency checker - Yoshimi dep libs
@@ -281,6 +282,9 @@ if(CLAPPlugin)
 endif()
 if(LV2Plugin_DPF)
   list(APPEND DPF_PLUGIN_TYPES "lv2")
+endif()
+if(JackStandalone)
+  list(APPEND DPF_PLUGIN_TYPES "jack")
 endif()
 
 dpf_add_plugin(
