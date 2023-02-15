@@ -1,4 +1,5 @@
 #include "Exchange.hpp"
+#include "Misc/TextMsgBuffer.h"
 
 /**
  * Send action to synth engine. (CLI method)
@@ -69,6 +70,135 @@ int YoshimiExchange::sendNormal(SynthEngine*  synth,
         return REPLY::failed_msg;
     }
     return REPLY::done_msg;
+}
+
+/**
+ * Send direct action to synth engine. (CLI method)
+ *
+ * Implemented from: Misc/CliFuncs.h:246
+ * Usages:
+ *   - CLI/CmdInterpreter.cpp: cmdInterpreter::commandPart()
+ *     - Line 5463: Set instrument
+ */
+int YoshimiExchange::sendDirect(SynthEngine*  synth,
+                                unsigned char action, float value, unsigned char type, unsigned char control, unsigned char part,
+                                unsigned char kit,
+                                unsigned char engine,
+                                unsigned char insert,
+                                unsigned char parameter,
+                                unsigned char offset,
+                                unsigned char miscmsg,
+                                unsigned char request)
+{
+    if (action == TOPLEVEL::action::fromMIDI && part != TOPLEVEL::section::midiLearn)
+        request = type & TOPLEVEL::type::Default;
+    CommandBlock putData;
+
+    putData.data.value     = value;
+    putData.data.control   = control;
+    putData.data.part      = part;
+    putData.data.kit       = kit;
+    putData.data.engine    = engine;
+    putData.data.insert    = insert;
+    putData.data.parameter = parameter;
+    putData.data.offset    = offset;
+    putData.data.miscmsg   = miscmsg;
+
+    if (type == TOPLEVEL::type::Default) {
+        putData.data.type = TOPLEVEL::type::Limits;
+        synth->interchange.readAllData(&putData);
+        if ((putData.data.type & TOPLEVEL::type::Learnable) == 0) {
+            synth->getRuntime().Log("Can't learn this control");
+            return 0;
+        }
+    }
+
+    if (part != TOPLEVEL::section::midiLearn)
+        action |= TOPLEVEL::action::fromCLI;
+    /*
+     * MIDI learn is synced by the audio thread but
+     * not passed on to any of the normal controls.
+     * The type field is used for a different purpose.
+     */
+    putData.data.source = action | TOPLEVEL::action::fromCLI;
+    putData.data.type   = type;
+    if (request < TOPLEVEL::type::Limits) {
+        putData.data.type = request | TOPLEVEL::type::Limits;
+        value             = synth->interchange.readAllData(&putData);
+        string name;
+        switch (request) {
+            case TOPLEVEL::type::Minimum:
+                name = "Min ";
+                break;
+            case TOPLEVEL::type::Maximum:
+                name = "Max ";
+                break;
+            default:
+                name = "Default ";
+                break;
+        }
+        type = putData.data.type;
+        if ((type & TOPLEVEL::type::Integer) == 0)
+            name += std::to_string(value);
+        else if (value < 0)
+            name += std::to_string(int(value - 0.5f));
+        else
+            name += std::to_string(int(value + 0.5f));
+        if (type & TOPLEVEL::type::Error)
+            name += " - error";
+        else if (type & TOPLEVEL::type::Learnable)
+            name += " - learnable";
+        synth->getRuntime().Log(name);
+        return 0;
+    }
+
+    if (part == TOPLEVEL::section::main && (type & TOPLEVEL::type::Write) == 0 && control >= MAIN::control::readPartPeak && control <= MAIN::control::readMainLRrms) {
+        string name;
+        switch (control) {
+            case MAIN::control::readPartPeak:
+                name = "part " + std::to_string(int(kit));
+                if (engine == 0)
+                    name += "L ";
+                else
+                    name += "R ";
+                name += "peak ";
+                break;
+            case MAIN::control::readMainLRpeak:
+                name = "main ";
+                if (kit == 0)
+                    name += "L ";
+                else
+                    name += "R ";
+                name += "peak ";
+                break;
+            case MAIN::control::readMainLRrms:
+                name = "main ";
+                if (kit == 0)
+                    name += "L ";
+                else
+                    name += "R ";
+                name += "RMS ";
+                break;
+        }
+        value = synth->interchange.readAllData(&putData);
+        synth->getRuntime().Log(name + std::to_string(value));
+        return 0;
+    }
+
+    if (part == TOPLEVEL::section::config && putData.data.miscmsg != UNUSED && (control == CONFIG::control::bankRootCC || control == CONFIG::control::bankCC || control == CONFIG::control::extendedProgramChangeCC)) {
+        synth->getRuntime().Log("In use by " + TextMsgBuffer::instance().fetch(putData.data.miscmsg));
+        return 0;
+    }
+
+    if (parameter != UNUSED && (parameter & TOPLEVEL::action::lowPrio))
+        action |= (parameter & TOPLEVEL::action::muteAndLoop); // transfer low prio and loopback
+    putData.data.source = action;
+
+    if (synth->interchange.fromCLI.write(putData.bytes)) {
+        synth->getRuntime().finishedCLI = false;
+    } else
+        synth->getRuntime().Log("Unable to write to fromCLI buffer");
+    return 0; // no function for this yet
 }
 
 float YoshimiExchange::collect_readData(SynthEngine* synth, float value, unsigned char control, unsigned char part, unsigned char kititem, unsigned char engine, unsigned char insert, unsigned char parameter, unsigned char offset, unsigned char miscmsg, unsigned char request)

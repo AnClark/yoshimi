@@ -32,6 +32,15 @@ namespace YoshimiExchange {
                    unsigned char parameter = UNUSED,
                    unsigned char offset    = UNUSED,
                    unsigned char miscmsg   = NO_MSG);
+    int sendDirect(SynthEngine*  synth,
+                   unsigned char action, float value, unsigned char type, unsigned char control, unsigned char part,
+                   unsigned char kit       = UNUSED,
+                   unsigned char engine    = UNUSED,
+                   unsigned char insert    = UNUSED,
+                   unsigned char parameter = UNUSED,
+                   unsigned char offset    = UNUSED,
+                   unsigned char miscmsg   = NO_MSG,
+                   unsigned char request   = UNUSED);
 
     // ----------------------------------------------------------------------------------------------------------------
     // FLTK communicators for each UI component (not usable)
