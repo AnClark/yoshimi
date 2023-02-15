@@ -44,6 +44,7 @@ class YoshimiEditor : public UI {
 
     BankEntryMap fBankEntries;
     long         fBankCurrent;
+    long         fInstCurrent;
 
     // ----------------------------------------------------------------------------------------------------------------
 

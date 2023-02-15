@@ -46,6 +46,7 @@ YoshimiEditor::YoshimiEditor()
     // Read bank list
     YoshimiExchange::Bank::getBankEntries(fSynthesizer, fBankEntries);
     fBankCurrent = YoshimiExchange::Bank::getCurrentBank(fSynthesizer);
+    fInstCurrent = YoshimiExchange::Bank::getCurrentInstrument(fSynthesizer);
 }
 
 YoshimiEditor::~YoshimiEditor()
@@ -77,6 +78,13 @@ void YoshimiEditor::onImGuiDisplay()
     if (ImGui::Begin("Yoshimi Demo", nullptr, ImGuiWindowFlags_NoResize)) {
         static char aboutText[256] = "This is a demo UI for Yoshimi, based on Dear ImGui.\n";
         ImGui::InputTextMultiline("About", aboutText, sizeof(aboutText));
+
+#if 0
+        if (ImGui::Button("Set Instrument Test")) {
+            YoshimiExchange::Bank::switchBank(fSynthesizer, 105); // Standalone: 80, VST3: 105
+            YoshimiExchange::Bank::switchInstrument(fSynthesizer, 33, 0); // Standalone: 33
+        }
+#endif
 
         if (ImGui::SliderFloat("Master Volume", &fParams.pVolume, 0.0f, 127.0f)) {
             // NOTICE: Methods from FLTK UI does not take effects. Use CLI-provided one instead.
@@ -114,6 +122,7 @@ void YoshimiEditor::onImGuiDisplay()
 
                     if (ImGui::Selectable(it->second.dirname.c_str(), is_selected)) {
                         fBankCurrent = it->first;
+                        fInstCurrent = YoshimiExchange::Bank::getCurrentInstrument(fSynthesizer);
                         YoshimiExchange::Bank::switchBank(fSynthesizer, fBankCurrent);
                     }
 
@@ -123,6 +132,42 @@ void YoshimiEditor::onImGuiDisplay()
                 }
             }
             ImGui::EndCombo();
+        }
+
+        if (ImGui::BeginTable("Instruments", 5)) {
+            if (fBankEntries.count(fBankCurrent)) {
+                InstrumentEntryMap& instruments = fBankEntries.at(fBankCurrent).instruments;
+
+                int instrument_index = 0;
+
+                for (auto it = instruments.begin(); it != instruments.end(); it++) {
+                    const bool is_selected = fInstCurrent == it->first;
+
+                    if (!it->second.name.empty()) {
+                        char instrument_label[50];
+                        snprintf(instrument_label, 50, "%02d: %s", it->first, it->second.name.c_str());
+
+                        if (ImGui::Selectable(instrument_label, is_selected)) {
+                            fInstCurrent = it->first;
+
+                            if (!YoshimiExchange::Bank::fetchData(fSynthesizer, 0, PART::control::enable, 0))
+                                d_stderr("Active part disabled");
+                            else {
+                                // TODO: Specify active part
+                                YoshimiExchange::Bank::switchInstrument(fSynthesizer, fInstCurrent, 0);
+                            }
+                        }
+                    } else {
+                        ImGui::Selectable("##EMPTY", false);
+                    }
+
+                    if (instrument_index % 31 == 0)
+                        ImGui::TableNextColumn();
+                    instrument_index++;
+                }
+            }
+
+            ImGui::EndTable();
         }
 
         if (ImGui::IsItemDeactivated()) {
