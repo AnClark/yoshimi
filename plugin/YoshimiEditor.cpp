@@ -94,7 +94,20 @@ void YoshimiEditor::onImGuiDisplay()
             YoshimiExchange::sendNormal(fSynthesizer, TOPLEVEL::action::lowPrio, fParams.pKeyShift, TOPLEVEL::type::Write, MAIN::control::keyShift, TOPLEVEL::section::main);
         }
 
-        if (ImGui::BeginCombo("Banks", fBankEntries.at(fBankCurrent).dirname.c_str())) {
+        /**
+         * Workaround for VST2.
+         * Unlike VST3 and CLAP, VST2 version cannot fetch the right current bank
+         * and instrument ID, so it will result in a crash.
+         */
+        std::string current_bank_name;
+        if (fBankEntries.count(fBankCurrent)) {
+            current_bank_name = fBankEntries.at(fBankCurrent).dirname;
+        } else {
+            current_bank_name = "NO BANK";
+            fBankCurrent      = YoshimiExchange::Bank::getCurrentBank(fSynthesizer);
+        }
+
+        if (ImGui::BeginCombo("Banks", current_bank_name.c_str())) {
             for (auto it = fBankEntries.begin(); it != fBankEntries.end(); it++) {
                 if (!it->second.dirname.empty()) {
                     const bool is_selected = fBankCurrent == it->first;
