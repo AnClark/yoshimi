@@ -60,6 +60,11 @@ int YoshimiExchange::Bank::getCurrentBank(SynthEngine* synth)
     return fetchData(synth, 0, BANK::control::selectBank, TOPLEVEL::section::bank);
 }
 
+int YoshimiExchange::Bank::getCurrentInstrument(SynthEngine* synth)
+{
+    return fetchData(synth, 0, BANK::control::selectFirstInstrumentToSwap, TOPLEVEL::section::bank);
+}
+
 // ----------------------------------------------------------------------------------------------------------------
 // Set bank state
 
@@ -74,4 +79,12 @@ void YoshimiExchange::Bank::switchBank(SynthEngine* synth, long newBankId)
     YoshimiExchange::collect_data(synth, newBankId, TOPLEVEL::action::lowPrio | TOPLEVEL::action::forceUpdate, TOPLEVEL::type::Integer, BANK::control::selectBank, TOPLEVEL::section::bank);
     // YoshimiExchange::sendNormal(synth, TOPLEVEL::action::lowPrio | TOPLEVEL::action::forceUpdate, newBankId, TOPLEVEL::type::Integer | TOPLEVEL::type::Write, BANK::control::selectBank, TOPLEVEL::section::bank);
 }
+
+void YoshimiExchange::Bank::switchInstrument(SynthEngine* synth, long newInstrumentId, int activePart)
+{
+    send_data(synth, TOPLEVEL::action::forceUpdate, MAIN::control::loadInstrumentFromBank, newInstrumentId, TOPLEVEL::type::Integer, TOPLEVEL::section::main, activePart);
+
+    // The following two calls has the same effect as send_data()
+    // YoshimiExchange::sendNormal(synth, TOPLEVEL::action::forceUpdate, newInstrumentId, TOPLEVEL::type::Integer | TOPLEVEL::type::Write, MAIN::control::loadInstrumentFromBank, TOPLEVEL::section::main, activePart);
+    // YoshimiExchange::collect_data(synth, newInstrumentId, TOPLEVEL::action::forceUpdate, TOPLEVEL::type::Integer, MAIN::control::loadInstrumentFromBank, TOPLEVEL::section::main, activePart);
 }

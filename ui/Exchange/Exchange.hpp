@@ -64,11 +64,13 @@ namespace YoshimiExchange {
         void getBankNames(SynthEngine* synth, std::vector<std::string>& bankList);
         void getBankIndexes(SynthEngine* synth, std::vector<long>& indexList);
         int  getCurrentBank(SynthEngine* synth);
+        int  getCurrentInstrument(SynthEngine* synth);
 
         // ----------------------------
         // Set bank state
 
         void switchBank(SynthEngine* synth, long newBankId);
+        void switchInstrument(SynthEngine* synth, long newInstrumentId, int activePart);
     }
 
 }
